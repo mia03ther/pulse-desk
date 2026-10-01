@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>快讯台 · 复盘与社群简报</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <b>快讯台</b>
+      <span>搜索 · 复盘 · 写成能转发的观察</span>
+    </div>
+    <form class="search" onsubmit="return false">
+      <input id="q" placeholder="搜索市场信息" />
+    </form>
+    <button id="make" class="ghost">生成今日简报</button>
+    <p class="warn">演示数据，不构成投资建议</p>
+  </header>
+  <section id="quotes" class="quotes"></section>
+  <main class="layout">
+    <nav class="nav">
+      <button data-view="news" class="on">新闻快讯</button>
+      <button data-view="review">每日复盘</button>
+      <button data-view="calendar">投资日历</button>
+      <button data-view="filings">公告</button>
+      <button data-view="research">研报草稿</button>
+    </nav>
+    <section class="stream">
+      <div class="toolbar">
+        <div id="cats" class="cats">
+          <button data-cat="all" class="on">全部</button>
+          <button data-cat="market">市场新闻</button>
+          <button data-cat="watch">实时关注</button>
+          <button data-cat="flash">快讯</button>
+          <button data-cat="theme">题材资讯</button>
+        </div>
+        <span id="count"></span>
+      </div>
+      <div id="feed"></div>
+    </section>
+    <aside id="detail" class="detail"></aside>
+  </main>
+  <div id="toast"></div>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
