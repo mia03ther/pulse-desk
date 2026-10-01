@@ -1,23 +1,47 @@
-const state = { view: "news", cat: "all", q: "", selected: NEWS[0].id };
+const state = { view: "news", cat: "all", q: "", selected: NEWS[0].id, quotes: QUOTES };
 
-const $ = (sel) => document.querySelector(sel);
-const feed = $("#feed");
-const detail = $("#detail");
+const feed = document.querySelector("#feed");
+const detail = document.querySelector("#detail");
 
-function moneyChange(n) {
-  const cls = n > 0 ? "up" : n < 0 ? "down" : "flat";
+function changeHtml(n) {
+  const cls = n > 0 ? "up" : n < 0 ? "down" : "";
   const sign = n > 0 ? "+" : "";
   return `<span class="${cls}">${sign}${n.toFixed(1)}%</span>`;
 }
 
 function renderQuotes() {
-  $("#quotes").innerHTML = QUOTES.map((q) => `
-    <button class="quote" data-symbol="${q.symbol}">
+  document.querySelector("#quotes").innerHTML = state.quotes.map((q) => `
+    <div class="quote">
       <b>${q.symbol}</b>
       <span>${q.price}</span>
-      ${moneyChange(q.change)}
+      ${changeHtml(q.change)}
       <small>${q.note}</small>
-    </button>`).join("");
+    </div>`).join("");
+}
+
+async function loadLiveQuotes() {
+  const badge = document.querySelector("#live");
+  try {
+    const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,chainlink&vs_currencies=usd&include_24hr_change=true";
+    const data = await fetch(url).then((r) => r.json());
+    const map = [
+      ["bitcoin", "BTC", "Bitcoin"],
+      ["ethereum", "ETH", "Ether"],
+      ["solana", "SOL", "Solana"],
+      ["chainlink", "LINK", "Chainlink"]
+    ];
+    state.quotes = map.map(([id, symbol, name]) => ({
+      symbol,
+      name,
+      price: Number(data[id].usd).toLocaleString("en-US", { maximumFractionDigits: 2 }),
+      change: data[id].usd_24h_change,
+      note: "CoinGecko"
+    })).concat(QUOTES.filter((q) => q.symbol === "XAU" || q.symbol === "US10Y"));
+    badge.textContent = "行情已刷新";
+    renderQuotes();
+  } catch {
+    badge.textContent = "行情用样例";
+  }
 }
 
 function filtered() {
@@ -28,23 +52,10 @@ function filtered() {
   });
 }
 
-function renderFeed() {
-  const rows = filtered();
-  $("#count").textContent = `已显示 ${rows.length} 条`;
-  feed.innerHTML = rows.map((n) => `
-    <article class="item ${n.id === state.selected ? "on" : ""}" data-id="${n.id}">
-      <div class="meta"><span class="tag">${n.tag}</span><time>${n.date} ${n.time}</time></div>
-      <h3>${n.title}</h3>
-      <p>${n.body}</p>
-    </article>`).join("") || `<p class="empty">没有匹配的快讯。换个词，或切回全部。</p>`;
-  const current = NEWS.find((n) => n.id === state.selected) || rows[0];
-  if (current) renderDetail(current);
-}
-
 function renderDetail(n) {
   state.selected = n.id;
   detail.innerHTML = `
-    <p class="kicker">${CATS[n.category]} · ${n.tag}</p>
+    <p class="kicker">${CATS[n.category]} · ${n.date} ${n.time}</p>
     <h2>${n.title}</h2>
     <p class="body">${n.body}</p>
     <dl>
@@ -53,7 +64,19 @@ function renderDetail(n) {
       <div><dt>失效</dt><dd>${n.invalid}</dd></div>
     </dl>
     <button id="copyOne" class="primary">复制成社群帖</button>`;
-  $("#copyOne").onclick = () => copyText(onePost(n));
+  document.querySelector("#copyOne").onclick = () => copyText(onePost(n));
+}
+
+function renderFeed() {
+  const rows = filtered();
+  document.querySelector("#count").textContent = `${rows.length} 条`;
+  feed.innerHTML = rows.map((n) => `
+    <article class="item ${n.id === state.selected ? "on" : ""}" data-id="${n.id}">
+      <div class="meta"><span class="tag">${n.tag}</span><time>${n.date} ${n.time}</time></div>
+      <h3>${n.title}</h3>
+      <p>${n.body}</p>
+    </article>`).join("") || `<p class="panel">没有匹配的快讯。</p>`;
+  renderDetail(NEWS.find((n) => n.id === state.selected) || rows[0] || NEWS[0]);
 }
 
 function onePost(n) {
@@ -61,41 +84,34 @@ function onePost(n) {
 }
 
 function brief() {
-  const picks = NEWS.slice(0, 5);
-  const lines = picks.map((n, i) => `${i + 1}. ${n.tag}｜${n.title}\n依据：${n.impact}\n触发：${n.trigger}\n失效：${n.invalid}`).join("\n\n");
-  return `【样例简报】观察，不是投资建议。\n\n背景：产业叙事偏热，利率和汇率不配合追高。下面 5 条按社群转发来写。\n\n${lines}\n\n一句话：叙事可以跟踪，方向等价格和失效条件确认。`;
+  const lines = NEWS.slice(0, 5).map((n, i) => `${i + 1}. ${n.tag}｜${n.title}\n影响：${n.impact}\n触发：${n.trigger}\n失效：${n.invalid}`).join("\n\n");
+  return `【样例简报】观察，不是投资建议。\n\n${lines}`;
 }
 
 function renderReview() {
-  feed.innerHTML = `
-    <section class="panel">
-      <h2>今日复盘</h2>
-      <p>产业新闻强、宏观定价乱。芯片出口和存储长单支持 AI 叙事；美债、日债和美元把风险偏好按住。黄金同一小时内多空都出现过，所以帖子只能写区间。</p>
-      <pre id="briefBox">${brief()}</pre>
-      <button id="copyBrief" class="primary">复制 5 条简报</button>
-    </section>`;
-  detail.innerHTML = `<p class="kicker">用法</p><h2>先复盘，再发帖</h2><p class="body">这条复盘可以直接贴进岗位样例。发出前用 TradingView 对一下价位，样例数据不是实时行情。</p>`;
-  $("#copyBrief").onclick = () => copyText(brief());
+  feed.innerHTML = `<section class="panel"><h2>今日复盘</h2><p>产业叙事热，利率和汇率不配合追高。点右侧不会变，简报在这里复制。</p><pre>${brief()}</pre><button id="copyBrief" class="primary">复制 5 条简报</button></section>`;
+  detail.innerHTML = `<p class="kicker">复盘</p><h2>先看结构，再对盘口</h2><p class="body">价位以发出时的行情为准。这页演示的是写法，不是实时喊单。</p>`;
+  document.querySelector("#copyBrief").onclick = () => copyText(brief());
 }
 
 function renderCalendar() {
   feed.innerHTML = `<section class="panel"><h2>投资日历</h2><ul class="plain">${CALENDAR.map((c) => `<li><b>${c.date}</b> ${c.event} <em>${c.level}</em></li>`).join("")}</ul></section>`;
-  detail.innerHTML = `<p class="kicker">日历</p><h2>只标会改仓位的事件</h2><p class="body">低优先级事件写进日历，不写进买卖点。10 月 8 日特别国债是流动性日历，不是当天的加密催化。</p>`;
+  detail.innerHTML = `<p class="kicker">日历</p><h2>只把会改观察的事件放进来</h2><p class="body">低优先级事件不写进买卖点。</p>`;
 }
 
 function renderFilings() {
   feed.innerHTML = `<section class="panel"><h2>公告</h2>${FILINGS.map((f) => `<article class="item"><div class="meta"><span class="tag">${f.source}</span><time>${f.time}</time></div><h3>${f.title}</h3></article>`).join("")}</section>`;
-  detail.innerHTML = `<p class="kicker">公告</p><h2>原文和推论分开</h2><p class="body">公告只写已经发生的事。推论放在右侧影响栏，避免把磋商写成禁令。</p>`;
+  detail.innerHTML = `<p class="kicker">公告</p><h2>已发生和推论分开写</h2><p class="body">磋商不要写成已落地。</p>`;
 }
 
 function renderResearch() {
   feed.innerHTML = `<section class="panel"><h2>研报草稿</h2>${RESEARCH.map((r) => `<article class="item"><h3>${r.title}</h3><p>${r.summary}</p></article>`).join("")}</section>`;
-  detail.innerHTML = `<p class="kicker">研究</p><h2>一页纸就够</h2><p class="body">实习样例不需要长报告。一页纸写清叙事、资金是否跟上、失效条件。</p>`;
+  detail.innerHTML = `<p class="kicker">研究</p><h2>一页纸够用</h2><p class="body">叙事、资金有没有跟上、失效条件。</p>`;
 }
 
 function render() {
   document.querySelectorAll(".nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === state.view));
-  $("#cats").hidden = state.view !== "news";
+  document.querySelector("#cats").hidden = state.view !== "news";
   if (state.view === "news") renderFeed();
   if (state.view === "review") renderReview();
   if (state.view === "calendar") renderCalendar();
@@ -106,27 +122,39 @@ function render() {
 async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
-    $("#toast").textContent = "已复制";
+    document.querySelector("#toast").textContent = "已复制";
   } catch {
-    $("#toast").textContent = "复制失败，请手动选择";
+    document.querySelector("#toast").textContent = "复制失败";
   }
-  setTimeout(() => { $("#toast").textContent = ""; }, 1600);
+  setTimeout(() => { document.querySelector("#toast").textContent = ""; }, 1400);
 }
 
-document.querySelectorAll(".nav button").forEach((b) => b.onclick = () => { state.view = b.dataset.view; render(); });
-document.querySelectorAll(".cats button").forEach((b) => b.onclick = () => {
-  state.cat = b.dataset.cat;
-  document.querySelectorAll(".cats button").forEach((x) => x.classList.toggle("on", x === b));
+document.querySelector("#nav").onclick = (e) => {
+  const button = e.target.closest("button");
+  if (!button) return;
+  state.view = button.dataset.view;
+  render();
+};
+document.querySelector("#cats").onclick = (e) => {
+  const button = e.target.closest("button");
+  if (!button) return;
+  state.cat = button.dataset.cat;
+  document.querySelectorAll(".cats button").forEach((x) => x.classList.toggle("on", x === button));
   renderFeed();
-});
+};
 feed.onclick = (e) => {
   const item = e.target.closest(".item");
   if (!item || !item.dataset.id) return;
   state.selected = item.dataset.id;
   renderFeed();
 };
-$("#q").oninput = (e) => { state.q = e.target.value.trim(); if (state.view !== "news") state.view = "news"; render(); };
-$("#make").onclick = () => { state.view = "review"; render(); };
+document.querySelector("#q").oninput = (e) => {
+  state.q = e.target.value.trim();
+  state.view = "news";
+  render();
+};
+document.querySelector("#make").onclick = () => { state.view = "review"; render(); };
 
 renderQuotes();
 render();
+loadLiveQuotes();

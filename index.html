@@ -3,24 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>快讯台 · 复盘与社群简报</title>
+  <title>快讯台</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="top">
     <div class="brand">
-      <b>快讯台</b>
-      <span>搜索 · 复盘 · 写成能转发的观察</span>
+      <strong>快讯台</strong>
+      <span>点开就能看</span>
     </div>
     <form class="search" onsubmit="return false">
-      <input id="q" placeholder="搜索市场信息" />
+      <input id="q" placeholder="搜索标题、标签、正文" />
     </form>
-    <button id="make" class="ghost">生成今日简报</button>
-    <p class="warn">演示数据，不构成投资建议</p>
+    <div class="top-actions">
+      <button id="make" class="ghost">生成简报</button>
+      <span id="live" class="live">行情待刷新</span>
+    </div>
   </header>
-  <section id="quotes" class="quotes"></section>
-  <main class="layout">
-    <nav class="nav">
+  <div id="quotes" class="quotes"></div>
+  <div class="layout">
+    <nav class="nav" id="nav">
       <button data-view="news" class="on">新闻快讯</button>
       <button data-view="review">每日复盘</button>
       <button data-view="calendar">投资日历</button>
@@ -41,7 +43,7 @@
       <div id="feed"></div>
     </section>
     <aside id="detail" class="detail"></aside>
-  </main>
+  </div>
   <div id="toast"></div>
   <script src="data.js"></script>
   <script src="app.js"></script>
